@@ -15,7 +15,7 @@ namespace CSharp_Web_scraping_project.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer("Server=(local);Initial Catalog=OPTCGWebScrapeDB;User ID=testuser;Password=testing;TrustServerCertificate=true;");
+                optionsBuilder.UseSqlServer("Server=(local);Initial Catalog=OPTCGWebScrapeDB;Integrated Security=True;TrustServerCertificate=true;");
             }
         }
     }

@@ -8,10 +8,10 @@ class Program
     {
         var testCard = new Card
         {
-            Title = "Test Card",
-            Rarity = "Common",
-            QuantityOfListings = 10,
-            MarketPrice = 5.99m
+            Title = "George Humphries Card",
+            Rarity = "Ultra Rare",
+            QuantityOfListings = 1,
+            MarketPrice = 500000.99m
         };
 
         using (var context = new CardDbContext())
