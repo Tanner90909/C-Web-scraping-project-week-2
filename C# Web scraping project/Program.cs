@@ -16,8 +16,8 @@ class Program
 
         using (var context = new CardDbContext())
         {
-          context.Database.EnsureCreated();
-            context.Cards.Add(testCard);
+            context.Database.EnsureCreated();
+            context.tblCardDetails.Add(testCard);
             context.SaveChanges();
         }
 

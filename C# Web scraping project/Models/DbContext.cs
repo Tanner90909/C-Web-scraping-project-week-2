@@ -9,13 +9,13 @@ namespace CSharp_Web_scraping_project.Models
 {
     public class CardDbContext : DbContext
     {
-        public DbSet<Card>? Cards { get; set; }
+        public DbSet<Card>? tblCardDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer("Server=(local);Initial Catalog=OPTCGWebScrapeDB;User ID=testuser;Password=testing;");
+                optionsBuilder.UseSqlServer("Server=(local);Initial Catalog=OPTCGWebScrapeDB;User ID=testuser;Password=testing;TrustServerCertificate=true;");
             }
         }
     }
