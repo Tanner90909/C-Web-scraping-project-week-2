@@ -12,7 +12,6 @@ class Program
             Rarity = "Common",
             QuantityOfListings = 10,
             MarketPrice = 5.99m
-            // No need to set UpdateTime
         };
 
         using (var context = new CardDbContext())

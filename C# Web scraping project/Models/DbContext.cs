@@ -15,7 +15,7 @@ namespace CSharp_Web_scraping_project.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer("Server=localhost;Database=OPTCGWebScrapeDB;Integrated Security=True");
+                optionsBuilder.UseSqlServer("Server=(local);Initial Catalog=OPTCGWebScrapeDB;User ID=testuser;Password=testing;");
             }
         }
     }
