@@ -4,23 +4,40 @@ using System;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
-        var testCard = new Card
+        var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
-            Title = "George Humphries Card",
-            Rarity = "Ultra Rare",
-            QuantityOfListings = 1,
-            MarketPrice = 500000.99m
-        };
+            Headless = false,
+            ExecutablePath = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+        });
 
-        using (var context = new CardDbContext())
-        {
-            context.Database.EnsureCreated();
-            context.tblCardDetails.Add(testCard);
-            context.SaveChanges();
-        }
+        var page = await browser.NewPageAsync();
+        await page.GoToAsync("https://www.tcgplayer.com");
 
-        Console.WriteLine("Card added to the database successfully");
+        //Search for a card
+        await page.WaitForSelectorAsync("input[id=autocomplete-input]");
+        await page.TypeAsync("input[id=autocomplete-input]", "Gecko Moria (086) - Wings of the Captain (op06)");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("section[class=product-card__product]");
+        await page.ClickAsync("section[class=product-card__product]");
+
+        //Get card details
+        await page.WaitForSelectorAsync("h1[class=product-details__name]");
+        var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
+
+        var rarity = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
+        
+        await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
+        var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
+        var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
+        
+        await page.WaitForSelectorAsync("span[class=spotlight__price]");
+        var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
+        var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
+
+
+
+        //await browser.CloseAsync();
     }
 }
