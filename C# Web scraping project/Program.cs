@@ -7,12 +7,11 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        var cardNames = new List<string>
-        {
-            "Gecko Moria (086) - Wings of the Captain (op06)",
-            "Hody Jones (035) - Wings of the Captain (OP06)",
-            "Vinsmoke Reiju (069) - Wings of the Captain (OP06)"
-        };
+        List<string> cardNames = new List<string>();
+        await CollectCardNames(cardNames);
+
+        Console.WriteLine();
+        Console.WriteLine("The application is now going to gather data for your card list.");
 
         var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
@@ -38,7 +37,7 @@ class Program
             var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
 
             await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
-            
+
             await Task.Delay(2000);
             var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
 
@@ -54,6 +53,19 @@ class Program
             var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
             var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
 
+            Console.WriteLine($"{title} average market price is ${marketPriceValue}");
+            Console.WriteLine();
+            Console.WriteLine("Would you like to log this card to your database? (yes/no)");
+            Console.WriteLine();
+            if (Console.ReadLine().ToLower() == "yes")
+            {
+                await LogCardToDatabase(title, rarity, quantityOfListingsValue, marketPriceValue);
+            }
+            else
+            {
+                Console.WriteLine();
+                Console.WriteLine("Card not logged.");
+            }
             var CardToLog = new Card
             {
                 Title = title,
@@ -70,6 +82,76 @@ class Program
 
             await page.GoToAsync("https://www.tcgplayer.com");
         }
+
+
+        static async Task CollectCardNames(List<string> cardNames)
+        {
+            Console.WriteLine("Welcome to your own personal One Piece Trading Card market tracker app!");
+            Console.WriteLine();
+            Console.WriteLine("Please enter the card names you would like to track. Be sure to enter the card name exactly as it appears on tcgplayer.com. Type 'done' when you are finished:");
+            Console.WriteLine();
+
+            while (true)
+            {
+                Console.Write("Enter a card name or 'done' to finish: ");
+                Console.WriteLine();
+                string input = Console.ReadLine();
+
+                if (input.ToLower() == "done")
+                {
+                    Console.WriteLine("Are you sure you are done? (yes/no)");
+                    Console.WriteLine();
+                    string confirmation = Console.ReadLine();
+                    if (confirmation.ToLower() == "yes")
+                    {
+                        Console.WriteLine("Here is your watch list:");
+                        Console.WriteLine();
+                        foreach (var card in cardNames)
+                        {
+                            Console.WriteLine(card);
+                        }
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Please continue entering card names.");
+                        Console.WriteLine();
+                    }
+                }
+                else
+                {
+                    cardNames.Add(input);
+                    Console.WriteLine();
+                    Console.WriteLine($"{input} added to your watch list.");
+                    Console.WriteLine();
+                }
+            }
+        }
+
+        // Log card to database method
+        static async Task LogCardToDatabase(string title, string rarity, int quantityOfListingsValue, decimal marketPriceValue)
+        {
+            var CardToLog = new Card
+            {
+                Title = title,
+                Rarity = rarity,
+                QuantityOfListings = quantityOfListingsValue,
+                MarketPrice = marketPriceValue,
+            };
+
+            using (var context = new CardDbContext())
+            {
+                context.tblCardDetails.Add(CardToLog);
+                context.SaveChanges();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"{title} data successfully saved at {DateTime.Now}.");
+        }
+        Console.WriteLine();
+        Console.WriteLine("Thank you for using the One Piece Trading Card market tracker app!");
+        Console.WriteLine();
+        Console.WriteLine("Press any key to exit.");
 
         await browser.CloseAsync();
     }
