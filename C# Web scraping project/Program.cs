@@ -26,8 +26,9 @@ class Program
         await page.WaitForSelectorAsync("h1[class=product-details__name]");
         var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
 
-        var rarity = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
-        
+        var rarityElement = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
+        var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
+
         await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
         var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
         var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
