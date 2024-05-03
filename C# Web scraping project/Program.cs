@@ -16,7 +16,7 @@ class Program
 
         var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
-            Headless = false,
+            Headless = true,
             ExecutablePath = "C:/Program Files/Google/Chrome/Application/chrome.exe"
         });
 
@@ -40,7 +40,19 @@ class Program
             var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
 
             await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
+            
+            // Delay to wait for quantity of listings to update
+            await Task.Delay(2000);
             var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
+
+            // Check if quantity of listings is "No Listings Available"
+            if (quantityOfListingsText == "No Listings Available")
+            {
+                // Reset page for the next card
+                await page.GoToAsync("https://www.tcgplayer.com");
+                continue;
+            }
+
             var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
 
             await page.WaitForSelectorAsync("span[class=spotlight__price]");
