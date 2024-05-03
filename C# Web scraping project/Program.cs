@@ -24,36 +24,38 @@ class Program
 
         foreach (var cardName in cardNames)
         {
+            // Search for card
             await page.WaitForSelectorAsync("input[id=autocomplete-input]");
             await page.TypeAsync("input[id=autocomplete-input]", cardName);
             await page.Keyboard.PressAsync("Enter");
             await page.WaitForSelectorAsync("section[class=product-card__product]");
             await page.ClickAsync("section[class=product-card__product]");
 
+            // Get card title
             await page.WaitForSelectorAsync("h1[class=product-details__name]");
             var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
 
+            // Get card rarity
             var rarityElement = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
             var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
 
+            // Get quantity of listings for card
             await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
-
             await Task.Delay(2000);
             var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
-
             if (quantityOfListingsText == "No Listings Available")
             {
                 await page.GoToAsync("https://www.tcgplayer.com");
                 continue;
             }
-
             var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
 
+            // Get average market price for card
             await page.WaitForSelectorAsync("span[class=spotlight__price]");
             var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
             var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
 
-            Console.WriteLine($"{title} average market price is ${marketPriceValue}");
+            Console.WriteLine($"{title} average market price is ${marketPriceValue} and there are {quantityOfListingsValue} listings available.");
             Console.WriteLine();
             Console.WriteLine("Would you like to log this card to your database? (yes/no)");
             Console.WriteLine();
@@ -83,7 +85,7 @@ class Program
             await page.GoToAsync("https://www.tcgplayer.com");
         }
 
-
+        // Method that loops to collect card names from user input
         static async Task CollectCardNames(List<string> cardNames)
         {
             Console.WriteLine("Welcome to your own personal One Piece Trading Card market tracker app!");
