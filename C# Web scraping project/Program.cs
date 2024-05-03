@@ -37,8 +37,21 @@ class Program
         var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
         var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
 
+        var CardToLog = new Card
+        {
+            Title = title,
+            Rarity = rarity,
+            QuantityOfListings = quantityOfListingsValue,
+            MarketPrice = marketPriceValue,
+        };
 
+        //Save card details to database
+        using (var context = new CardDbContext())
+        {
+            context.tblCardDetails.Add(CardToLog);
+            context.SaveChanges();
+        }
 
-        //await browser.CloseAsync();
+        await browser.CloseAsync();
     }
 }
