@@ -1,11 +1,19 @@
 ﻿using CSharp_Web_scraping_project.Models;
 using PuppeteerSharp;
 using System;
+using System.Net.NetworkInformation;
 
 class Program
 {
     static async Task Main(string[] args)
     {
+        var cardNames = new List<string>
+        {
+            "Gecko Moria (086) - Wings of the Captain (op06)",
+            "Hody Jones (035) - Wings of the Captain (OP06)",
+            "Vinsmoke Reiju (069) - Wings of the Captain (OP06)"
+        };
+
         var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
             Headless = false,
@@ -15,41 +23,47 @@ class Program
         var page = await browser.NewPageAsync();
         await page.GoToAsync("https://www.tcgplayer.com");
 
-        //Search for a card
-        await page.WaitForSelectorAsync("input[id=autocomplete-input]");
-        await page.TypeAsync("input[id=autocomplete-input]", "Gecko Moria (086) - Wings of the Captain (op06)");
-        await page.Keyboard.PressAsync("Enter");
-        await page.WaitForSelectorAsync("section[class=product-card__product]");
-        await page.ClickAsync("section[class=product-card__product]");
-
-        //Get card details
-        await page.WaitForSelectorAsync("h1[class=product-details__name]");
-        var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
-
-        var rarityElement = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
-        var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
-
-        await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
-        var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
-        var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
-        
-        await page.WaitForSelectorAsync("span[class=spotlight__price]");
-        var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
-        var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
-
-        var CardToLog = new Card
+        foreach (var cardName in cardNames)
         {
-            Title = title,
-            Rarity = rarity,
-            QuantityOfListings = quantityOfListingsValue,
-            MarketPrice = marketPriceValue,
-        };
+            //Search for a card
+            await page.WaitForSelectorAsync("input[id=autocomplete-input]");
+            await page.TypeAsync("input[id=autocomplete-input]", cardName);
+            await page.Keyboard.PressAsync("Enter");
+            await page.WaitForSelectorAsync("section[class=product-card__product]");
+            await page.ClickAsync("section[class=product-card__product]");
 
-        //Save card details to database
-        using (var context = new CardDbContext())
-        {
-            context.tblCardDetails.Add(CardToLog);
-            context.SaveChanges();
+            //Get card details
+            await page.WaitForSelectorAsync("h1[class=product-details__name]");
+            var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
+
+            var rarityElement = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
+            var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
+
+            await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
+            var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
+            var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
+
+            await page.WaitForSelectorAsync("span[class=spotlight__price]");
+            var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
+            var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
+
+            var CardToLog = new Card
+            {
+                Title = title,
+                Rarity = rarity,
+                QuantityOfListings = quantityOfListingsValue,
+                MarketPrice = marketPriceValue,
+            };
+
+            //Save card details to database
+            using (var context = new CardDbContext())
+            {
+                context.tblCardDetails.Add(CardToLog);
+                context.SaveChanges();
+            }
+
+            // Reset page for the next card
+            await page.GoToAsync("https://www.tcgplayer.com");
         }
 
         await browser.CloseAsync();
