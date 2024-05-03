@@ -25,14 +25,12 @@ class Program
 
         foreach (var cardName in cardNames)
         {
-            //Search for a card
             await page.WaitForSelectorAsync("input[id=autocomplete-input]");
             await page.TypeAsync("input[id=autocomplete-input]", cardName);
             await page.Keyboard.PressAsync("Enter");
             await page.WaitForSelectorAsync("section[class=product-card__product]");
             await page.ClickAsync("section[class=product-card__product]");
 
-            //Get card details
             await page.WaitForSelectorAsync("h1[class=product-details__name]");
             var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
 
@@ -41,14 +39,11 @@ class Program
 
             await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
             
-            // Delay to wait for quantity of listings to update
             await Task.Delay(2000);
             var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
 
-            // Check if quantity of listings is "No Listings Available"
             if (quantityOfListingsText == "No Listings Available")
             {
-                // Reset page for the next card
                 await page.GoToAsync("https://www.tcgplayer.com");
                 continue;
             }
@@ -67,14 +62,12 @@ class Program
                 MarketPrice = marketPriceValue,
             };
 
-            //Save card details to database
             using (var context = new CardDbContext())
             {
                 context.tblCardDetails.Add(CardToLog);
                 context.SaveChanges();
             }
 
-            // Reset page for the next card
             await page.GoToAsync("https://www.tcgplayer.com");
         }
 
