@@ -19,6 +19,7 @@ namespace CSharp_Web_scraping_project.Models
         public decimal MarketPrice { get; set; }
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTime UpdateTime { get; set; }
+        public int UserID { get; set; }
 
         public Card() { }
 
