@@ -1,27 +1,146 @@
 ﻿using CSharp_Web_scraping_project.Models;
 using PuppeteerSharp;
 using System;
+using System.Net.NetworkInformation;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
-        var testCard = new Card
-        {
-            Title = "Test Card",
-            Rarity = "Common",
-            QuantityOfListings = 10,
-            MarketPrice = 5.99m
-            // No need to set UpdateTime
-        };
+        List<string> cardNames = new List<string>();
+        await CollectCardNames(cardNames);
 
-        using (var context = new CardDbContext())
+        Console.WriteLine();
+        Console.WriteLine("The application is now going to gather data for your card list.");
+
+        var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
-          context.Database.EnsureCreated();
-            context.Cards.Add(testCard);
-            context.SaveChanges();
+            Headless = true,
+            ExecutablePath = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+        });
+
+        var page = await browser.NewPageAsync();
+        await page.GoToAsync("https://www.tcgplayer.com");
+
+        foreach (var cardName in cardNames)
+        {
+            // Search for card
+            await page.WaitForSelectorAsync("input[id=autocomplete-input]");
+            await page.TypeAsync("input[id=autocomplete-input]", cardName);
+            await page.Keyboard.PressAsync("Enter");
+            await page.WaitForSelectorAsync("section[class=product-card__product]");
+            await page.ClickAsync("section[class=product-card__product]");
+
+            // Get card title
+            await page.WaitForSelectorAsync("h1[class=product-details__name]");
+            var title = await page.EvaluateExpressionAsync<string>("document.querySelector('h1[class=product-details__name]').innerText");
+
+            // Get card rarity
+            var rarityElement = await page.XPathAsync("//strong[contains(text(), 'Rarity:')]/following-sibling::span");
+            var rarity = await rarityElement.FirstOrDefault()?.EvaluateFunctionAsync<string>($"el => el.textContent");
+
+            // Get quantity of listings for card
+            await page.WaitForSelectorAsync("span[class=view-all-listings__other-listings]");
+            await Task.Delay(2000);
+            var quantityOfListingsText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=view-all-listings__other-listings]').innerText");
+            if (quantityOfListingsText == "No Listings Available")
+            {
+                await page.GoToAsync("https://www.tcgplayer.com");
+                continue;
+            }
+            var quantityOfListingsValue = int.Parse(quantityOfListingsText.Trim().Split(' ')[1]);
+
+            // Get average market price for card
+            await page.WaitForSelectorAsync("span[class=spotlight__price]");
+            var marketPriceText = await page.EvaluateExpressionAsync<string>("document.querySelector('span[class=spotlight__price]').innerText");
+            var marketPriceValue = decimal.Parse(marketPriceText.Replace("$", ""));
+
+            Console.WriteLine($"{title} average market price is ${marketPriceValue} and there are {quantityOfListingsValue} listings available.");
+            Console.WriteLine();
+            Console.WriteLine("Would you like to log this card to your database? (yes/no)");
+            Console.WriteLine();
+            if (Console.ReadLine().ToLower() == "yes")
+            {
+                await LogCardToDatabase(title, rarity, quantityOfListingsValue, marketPriceValue);
+            }
+            else
+            {
+                Console.WriteLine();
+                Console.WriteLine("Card not logged.");
+            }
+            await page.GoToAsync("https://www.tcgplayer.com");
         }
 
-        Console.WriteLine("Card added to the database successfully");
+        // Method that loops to collect card names from user input
+        static async Task CollectCardNames(List<string> cardNames)
+        {
+            Console.WriteLine("Welcome to your own personal One Piece Trading Card market tracker app!");
+            Console.WriteLine();
+            Console.WriteLine("Please enter the card names you would like to track. Be sure to enter the card name exactly as it appears on tcgplayer.com. Type 'done' when you are finished:");
+            Console.WriteLine();
+
+            while (true)
+            {
+                Console.Write("Enter a card name or 'done' to finish: ");
+                Console.WriteLine();
+                string input = Console.ReadLine();
+
+                if (input.ToLower() == "done")
+                {
+                    Console.WriteLine("Are you sure you are done? (yes/no)");
+                    Console.WriteLine();
+                    string confirmation = Console.ReadLine();
+                    if (confirmation.ToLower() == "yes")
+                    {
+                        Console.WriteLine("Here is your watch list:");
+                        Console.WriteLine();
+                        foreach (var card in cardNames)
+                        {
+                            Console.WriteLine(card);
+                        }
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Please continue entering card names.");
+                        Console.WriteLine();
+                    }
+                }
+                else
+                {
+                    cardNames.Add(input);
+                    Console.WriteLine();
+                    Console.WriteLine($"{input} added to your watch list.");
+                    Console.WriteLine();
+                }
+            }
+        }
+
+        // Log card to database method
+        static async Task LogCardToDatabase(string title, string rarity, int quantityOfListingsValue, decimal marketPriceValue)
+        {
+            var CardToLog = new Card
+            {
+                Title = title,
+                Rarity = rarity,
+                QuantityOfListings = quantityOfListingsValue,
+                MarketPrice = marketPriceValue,
+            };
+
+            using (var context = new CardDbContext())
+            {
+                context.tblCardDetails.Add(CardToLog);
+                context.SaveChanges();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"{title} data successfully saved at {DateTime.Now}.");
+        }
+        Console.WriteLine();
+        Console.WriteLine("Thank you for using the One Piece Trading Card market tracker app!");
+        Console.WriteLine();
+        Console.WriteLine("Press any key to exit.");
+
+        await browser.CloseAsync();
     }
 }
