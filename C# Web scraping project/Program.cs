@@ -68,20 +68,6 @@ class Program
                 Console.WriteLine();
                 Console.WriteLine("Card not logged.");
             }
-            var CardToLog = new Card
-            {
-                Title = title,
-                Rarity = rarity,
-                QuantityOfListings = quantityOfListingsValue,
-                MarketPrice = marketPriceValue,
-            };
-
-            using (var context = new CardDbContext())
-            {
-                context.tblCardDetails.Add(CardToLog);
-                context.SaveChanges();
-            }
-
             await page.GoToAsync("https://www.tcgplayer.com");
         }
 
