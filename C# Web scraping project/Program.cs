@@ -165,6 +165,7 @@ class Program
 
         static void Register()
         {
+            Console.WriteLine("To register a new account, please create a new username and password.");
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
@@ -186,6 +187,7 @@ class Program
 
         static void Login()
         {
+            Console.WriteLine("To login, please enter your username and password.");
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
