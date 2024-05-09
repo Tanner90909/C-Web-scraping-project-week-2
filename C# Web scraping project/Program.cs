@@ -151,15 +151,15 @@ class Program
     }
 
     // Log card to database method
-    static async Task LogCardToDatabase(string title, string rarity, int quantityOfListingsValue, decimal marketPriceValue, int userID)
-    {
+    static async Task LogCardToDatabase(string title, string rarity, int quantityOfListingsValue, decimal marketPriceValue, int userId)
+{
         var CardToLog = new Card
         {
             Title = title,
             Rarity = rarity,
             QuantityOfListings = quantityOfListingsValue,
             MarketPrice = marketPriceValue,
-            UserID = userID 
+            UserID = userId
         };
 
         using (var context = new CardDbContext())

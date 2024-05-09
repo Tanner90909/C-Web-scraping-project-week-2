@@ -9,8 +9,6 @@ namespace C__Web_scraping_project.Models
 {
     public class UserService
     {
-        private Dictionary<string, User> users; // Add a private dictionary field to store the users
-
         public bool RegisterUser(string username, string password)
         {
             if (username.Length < 5 || password.Length < 8)
@@ -56,17 +54,14 @@ namespace C__Web_scraping_project.Models
 
             return false;
         }
+
         public int GetUserID(string username)
         {
-            if (users != null && users.ContainsKey(username))
+            using (var context = new UserDbContext())
             {
-                var user = users[username];
-                if (user != null)
-                {
-                    return user.GetHashCode();
-                }
+                var user = context.tblUsers.FirstOrDefault(u => u.Username == username);
+                return user?.UserID ?? 0;
             }
-            return 0;
         }
 
     }
