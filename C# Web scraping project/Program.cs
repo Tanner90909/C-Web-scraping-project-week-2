@@ -15,44 +15,171 @@ class Program
         Console.Write("Enter your choice (1 or 2): ");
 
         string choice = Console.ReadLine();
+        bool continueApp = true;
 
         switch (choice)
         {
             case "1":
                 Register();
+                Console.WriteLine("Please log in with your new account.");
+                UserService.UserInfo loginResultAfterRegistration = Login();
+                bool isAuthenticatedAfterRegistration = loginResultAfterRegistration.IsAuthenticated;
+                if (isAuthenticatedAfterRegistration)
+                {
+                    while (continueApp)
+                    {
+                        continueApp = await UserMenu(loginResultAfterRegistration);
+                    }
+                }
                 break;
             case "2":
-                LoginResult loginResult = Login();
+                UserService.UserInfo loginResult = Login();
                 bool isAuthenticated = loginResult.IsAuthenticated;
                 int userID = loginResult.UserID;
+                string username = loginResult.Username;
 
                 if (isAuthenticated)
                 {
-                    List<string> cardNames = new List<string>();
-                    await CollectCardNames(cardNames);
-
-                    Console.WriteLine();
-                    Console.WriteLine("The application is now going to gather data for your card list.");
-
-                    var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+                    while (continueApp)
                     {
-                        Headless = true,
-                        ExecutablePath = "C:/Program Files/Google/Chrome/Application/chrome.exe"
-                    });
-
-                    var page = await browser.NewPageAsync();
-                    await page.GoToAsync("https://www.tcgplayer.com");
-
-                    await GatherCardData(cardNames, page, userID);
+                        continueApp = await UserMenu(loginResult);
+                    }
                 }
                 break;
             default:
                 Console.WriteLine("Invalid choice. Please enter 1 or 2.");
                 break;
         }
+        Console.WriteLine("Thank you for using the One Piece Trading Card market tracker app!");
     }
 
+    // Add a new method that greets the user and asks whether they want to get new card data or view the data they have already collected
+    static async Task<bool> UserMenu(UserService.UserInfo loginResult)
+    {
+        Console.WriteLine("Welcome " + loginResult.Username + "!");
+        Console.WriteLine();
+        Console.WriteLine("Would you like to get new card data or view the data you have already collected? (new/view)");
+        string choice = Console.ReadLine();
+        Console.WriteLine();
 
+        switch (choice)
+        {
+            case "new":
+                List<string> cardNames = new List<string>();
+                await CollectCardNames(cardNames);
+
+                Console.WriteLine();
+                Console.WriteLine("The application is now going to gather data for your card list.");
+
+                var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+                {
+                    Headless = true,
+                    ExecutablePath = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+                });
+
+                var page = await browser.NewPageAsync();
+                await page.GoToAsync("https://www.tcgplayer.com");
+
+                await GatherCardData(cardNames, page, loginResult.UserID);
+                break;
+            case "view":
+                Console.WriteLine("Here is the data you have collected so far:");
+                Console.WriteLine();
+                var cardTitles = GetUniqueCardTitlesByUserID(loginResult.UserID);
+                Dictionary<int, string> cardNumberTitleMap = new Dictionary<int, string>();
+                Console.WriteLine("Here are the cards you have saved to your account");
+                Console.WriteLine();
+                for (int i = 0; i < cardTitles.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}) {cardTitles[i]}");
+                    cardNumberTitleMap[i + 1] = cardTitles[i];
+
+                }
+                Console.WriteLine();
+                Console.WriteLine("Which card would you like to view your data for? (Enter the number or Enter 'all')");
+                string userInput = Console.ReadLine();
+                if (int.TryParse(userInput, out int cardNumber))
+                {
+                    // User entered a valid card number
+                    if (cardNumberTitleMap.ContainsKey(cardNumber))
+                    {
+                        string selectedCardTitle = cardNumberTitleMap[cardNumber];
+                        await GetCardDataByTitle(selectedCardTitle, loginResult.UserID);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid card number. Please try again.");
+                    }
+                }
+                else if (userInput.ToLower() == "all")
+                {
+                    // User entered 'all'
+                    await GetCardDataByTitle("all", loginResult.UserID);
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input. Please try again.");
+                }
+
+                break;
+            default:
+                Console.WriteLine("Invalid choice. Please enter 'new' or 'view'.");
+                break;
+        }
+        Console.WriteLine("Do you want to go back to the menu or exit? (menu/exit)");
+        string userDecision = Console.ReadLine();
+        if (userDecision.ToLower() == "menu")
+        {
+            return true; // User wants to return to the menu
+        }
+        else
+        {
+            return false; // User wants to exit
+        }
+    }
+    // Gets unique card titles by user ID
+    public static List<string> GetUniqueCardTitlesByUserID(int userID)
+    {
+        using (var context = new CardDbContext())
+        {
+            var uniqueTitles = context.tblCardDetails
+                .Where(card => card.UserID == userID)
+                .Select(card => card.Title)
+                .Distinct()
+                .ToList();
+            return uniqueTitles;
+        }
+    }
+    // Write a new method that gets card data based on the user's selection in the UserMenu method
+    static async Task GetCardDataByTitle(string title, int userID)
+    {
+        using (var context = new CardDbContext())
+        {
+            IQueryable<Card> cardData;
+
+            if (title.ToLower() == "all")
+            {
+                cardData = context.tblCardDetails
+                    .Where(card => card.UserID == userID)
+                    .OrderBy(card => card.Title);
+            }
+            else
+            {
+                cardData = context.tblCardDetails
+                    .Where(card => card.Title == title && card.UserID == userID);
+            }
+
+            foreach (var card in cardData)
+            {
+                Console.WriteLine($"Title: {card.Title}");
+                Console.WriteLine($"Rarity: {card.Rarity}");
+                Console.WriteLine($"Quantity of Listings: {card.QuantityOfListings}");
+                Console.WriteLine($"Market Price: {card.MarketPrice}");
+                Console.WriteLine($"Time When Logged: {card.UpdateTime}");
+                Console.WriteLine();
+            }
+        }
+    }
 
     // Add a new method to handle the card data gathering
     static async Task GatherCardData(List<string> cardNames, IPage page, int userID)
@@ -194,15 +321,7 @@ class Program
             Console.WriteLine("Registration failed. Please try again.");
         }
     }
-
-
-    class LoginResult
-    {
-        public bool IsAuthenticated { get; set; }
-        public int UserID { get; set; }
-    }
-
-    static LoginResult Login()
+    static UserService.UserInfo Login()
     {
         Console.WriteLine("To login, please enter your username and password.");
         Console.Write("Enter username: ");
@@ -216,12 +335,12 @@ class Program
         if (isAuthenticated)
         {
             Console.WriteLine("Login successful!");
-            return new LoginResult { IsAuthenticated = true, UserID = userService.GetUserID(username) };
+            return new UserService.UserInfo() { IsAuthenticated = true, UserID = userService.GetUserInfo(username).UserID, Username = userService.GetUserInfo(username).Username};
         }
         else
         {
             Console.WriteLine("Login failed. Please check your username and password.");
-            return new LoginResult { IsAuthenticated = false, UserID = 0 };
+            return new UserService.UserInfo() { IsAuthenticated = false, UserID = 0, Username = null };
         }
     }
 }

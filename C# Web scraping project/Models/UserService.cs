@@ -55,14 +55,27 @@ namespace C__Web_scraping_project.Models
             return false;
         }
 
-        public int GetUserID(string username)
+        
+        public UserInfo GetUserInfo(string username)
         {
             using (var context = new UserDbContext())
             {
                 var user = context.tblUsers.FirstOrDefault(u => u.Username == username);
-                return user?.UserID ?? 0;
+                if (user != null)
+                {
+                    return new UserInfo { UserID = user.UserID, Username = user.Username };
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
-
+        public class UserInfo
+        {
+            public bool IsAuthenticated { get; set; }
+            public int UserID { get; set; }
+            public string Username { get; set; }
+        }
     }
 }
